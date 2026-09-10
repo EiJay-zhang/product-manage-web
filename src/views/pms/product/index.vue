@@ -199,8 +199,10 @@ import { optionSupplier } from "@/api/pms/supplier"
 import { optionCategory } from "@/api/pms/category"
 import { getDashboard } from "@/api/pms/dashboard"
 import { batchRefreshDevice } from "@/api/pms/device"
+import { useRoute } from "vue-router"
 
 const { proxy } = getCurrentInstance()
+const route = useRoute()
 
 const productList = ref([])
 const categoryOptions = ref([])
@@ -400,6 +402,10 @@ function handleExport() {
   proxy.download("pms/product/export", { ...queryParams.value }, `product_${new Date().getTime()}.xlsx`)
 }
 
+if (route.query.stockStatus) {
+  stockTab.value = String(route.query.stockStatus)
+  queryParams.value.stockStatus = stockTab.value
+}
 loadOptions()
 getList()
 loadStats()

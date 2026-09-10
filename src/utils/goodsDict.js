@@ -38,13 +38,6 @@ export const GOODS_LOGISTICS_STATUS = [
   { label: "已结清", value: "2", elTagType: "success" }
 ]
 
-export const GOODS_CARRIER = [
-  { label: "顺丰速运", value: "sf" },
-  { label: "德邦物流", value: "deppon" },
-  { label: "中通快递", value: "zto" },
-  { label: "京东物流", value: "jd" }
-]
-
 export function withDictFallback(dictRef, fallback) {
   return computed(() => (dictRef.value && dictRef.value.length ? dictRef.value : fallback))
 }

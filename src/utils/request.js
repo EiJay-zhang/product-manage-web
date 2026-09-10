@@ -78,6 +78,7 @@ service.interceptors.response.use(res => {
     const code = res.data.code || 200
     // 获取错误信息
     const msg = errorCode[code] || res.data.msg || errorCode['default']
+    const silent = res.config && res.config.silent === true
     // 二进制数据则直接返回
     if (res.request.responseType ===  'blob' || res.request.responseType ===  'arraybuffer') {
       return res.data
@@ -96,19 +97,22 @@ service.interceptors.response.use(res => {
     }
       return Promise.reject('无效的会话，或者会话已过期，请重新登录。')
     } else if (code === 500) {
-      ElMessage({ message: msg, type: 'error' })
+      if (!silent) ElMessage({ message: msg, type: 'error' })
       return Promise.reject(new Error(msg))
     } else if (code === 601) {
-      ElMessage({ message: msg, type: 'warning' })
+      if (!silent) ElMessage({ message: msg, type: 'warning' })
       return Promise.reject(new Error(msg))
     } else if (code !== 200) {
-      ElNotification.error({ title: msg })
+      if (!silent) ElNotification.error({ title: msg })
       return Promise.reject('error')
     } else {
       return  Promise.resolve(res.data)
     }
   },
   error => {
+    if (error.config && error.config.silent === true) {
+      return Promise.reject(error)
+    }
     console.log('err' + error)
     let { message } = error
     if (message == "Network Error") {

@@ -1,10 +1,11 @@
 import request from '@/utils/request'
 
-export function listProduct(query) {
+export function listProduct(query, config) {
   return request({
     url: '/pms/product/list',
     method: 'get',
-    params: query
+    params: query,
+    ...config
   })
 }
 

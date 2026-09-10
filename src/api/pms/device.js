@@ -1,10 +1,11 @@
 import request from '@/utils/request'
 
-export function listDevice(query) {
+export function listDevice(query, config) {
   return request({
     url: '/pms/device/list',
     method: 'get',
-    params: query
+    params: query,
+    ...config
   })
 }
 

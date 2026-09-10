@@ -1,10 +1,11 @@
 import request from '@/utils/request'
 
-export function listPurchase(query) {
+export function listPurchase(query, config) {
   return request({
     url: '/pms/purchase/list',
     method: 'get',
-    params: query
+    params: query,
+    ...config
   })
 }
 

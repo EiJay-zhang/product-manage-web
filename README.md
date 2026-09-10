@@ -42,7 +42,7 @@
 
 - Node.js 18+
 - 后端 `product-manage-system` 已启动，默认 `http://localhost:8080`
-- 已执行后端权威脚本 `product-manage-system/sql/pms.sql`（不要执行本仓库 `sql/goods_phase*.sql`）
+- 已执行后端权威脚本 `product-manage-system/sql/pms.sql`（不要再用已删除的 `goods` 遗留页面或过期 SQL）
 
 ## 本地运行
 
@@ -89,19 +89,18 @@ const baseUrl = 'http://localhost:8080' // 后端接口
 │   │   ├── stock/            # 打开库存 Tab
 │   │   ├── sale/             # 销售出库
 │   │   ├── logistics/        # 物流对账
+│   │   ├── carrier/          # 物流商
 │   │   ├── device/           # 墨水屏
 │   │   ├── report/           # 报表
 │   │   └── setting/          # 业务设置
 │   ├── views/system/         # 若依：用户 / 角色 / 菜单 / 字典等
 │   ├── views/monitor/        # 若依：日志 / 在线用户 / 缓存等
 │   ├── views/tool/           # 若依：代码生成 / 表单构建
-│   ├── views/goods/          # 一期遗留页面，不要再用
 │   ├── components/
 │   ├── layout/
 │   ├── router/
 │   ├── store/
 │   └── utils/
-├── sql/                      # 过期菜单脚本，不要执行
 ├── docs/                     # 实现情况与计划
 ├── vite.config.js
 └── package.json
@@ -110,7 +109,7 @@ const baseUrl = 'http://localhost:8080' // 后端接口
 开发约定：
 
 - 业务组件路径为 `pms/.../index`，对应后端菜单 component 字段
-- 正式业务走 `src/api/pms/`，不要再接 `src/api/goods/` 或 mock
+- 正式业务走 `src/api/pms/`，不要再接 mock
 - 菜单与权限以数据库 `sys_menu` 及后端 `pms.sql` 为准
 
 ## 相关文档

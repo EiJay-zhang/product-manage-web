@@ -58,7 +58,7 @@
           </template>
           <el-empty v-if="!notices.length" description="暂无待处理事项" :image-size="64" />
           <div v-else class="notice-list">
-            <div v-for="(item, index) in notices" :key="index" class="notice-item" @click="goPath(item.path)">
+            <div v-for="(item, index) in notices" :key="index" class="notice-item" @click="goPath(item.to)">
               <el-tag :type="item.type" size="small">{{ item.tag }}</el-tag>
               <div class="notice-body">
                 <div class="notice-title">{{ item.title }}</div>
@@ -163,7 +163,7 @@ const notices = computed(() => {
       tag: "库存预警",
       title: item.productName,
       desc: "当前库存 " + (item.stockQty || 0) + " 件，请及时补货",
-      path: "/pms/product"
+      to: { path: "/pms/product", query: { stockStatus: "warning" } }
     })
   })
   offlineDevices.value.forEach(item => {
@@ -172,16 +172,16 @@ const notices = computed(() => {
       tag: "墨水屏离线",
       title: item.sn || "未命名设备",
       desc: (item.shelfNo ? "货架 " + item.shelfNo + " · " : "") + (item.productName || "未绑定商品"),
-      path: "/pms/device"
+      to: { path: "/pms/device", query: { onlineStatus: "0" } }
     })
   })
   unpaidLogistics.value.forEach(item => {
     list.push({
       type: "danger",
-      tag: "物流未结清",
+      tag: "物流未对账",
       title: item.logisticsNo || item.purchaseNo || "物流单",
       desc: "待付 " + formatAmount(item.totalFee),
-      path: "/pms/logistics"
+      to: { path: "/pms/logistics", query: { payStatus: "0" } }
     })
   })
   if (stats.value.uncheckedCount) {
@@ -190,7 +190,7 @@ const notices = computed(() => {
       tag: "待对账",
       title: "有 " + stats.value.uncheckedCount + " 单物流待对账",
       desc: "请核对运费与进货单",
-      path: "/pms/logistics"
+      to: { path: "/pms/logistics", query: { payStatus: "0" } }
     })
   }
   return list.slice(0, 6)
@@ -213,8 +213,8 @@ function rankPercent(item) {
   return Math.round(Number(item.value || 0) / rankMax.value * 100)
 }
 
-function goPath(path) {
-  if (path) router.push(path)
+function goPath(to) {
+  if (to) router.push(to)
 }
 
 function disposeChart(chart) {
@@ -247,8 +247,10 @@ function renderChart(el, instanceName, points, title, type) {
   })
 }
 
+const quiet = { silent: true }
+
 function loadYearTrend() {
-  getReportTurnoverTrend({ range: "year", dimension: yearDimension.value }).then(res => {
+  getReportTurnoverTrend({ range: "year", dimension: yearDimension.value }, quiet).then(res => {
     renderChart(yearChartRef.value, "year", res.data || [], "", "bar")
   }).catch(() => {
     renderChart(yearChartRef.value, "year", [], "", "bar")
@@ -264,22 +266,22 @@ function loadData() {
   loading.value = true
   Promise.allSettled([
     getDashboard().then(res => { stats.value = res.data || {} }),
-    getReportOverview({ range: "month" }).then(res => { overview.value = res.data || {} }),
-    getReportTurnover({ range: "month" }).then(res => { monthTurnover.value = res.data || {} }),
-    getReportTurnoverCompare({ range: "month" }).then(res => { monthCompare.value = res.data || {} }),
-    getReportTurnover({ range: "week" }).then(res => { weekTurnover.value = res.data || {} }),
-    getReportTurnoverCompare({ range: "week" }).then(res => { weekCompare.value = res.data || {} }),
-    getReportTurnoverRank({ range: "month" }).then(res => { rankList.value = res.data || [] }),
-    getReportTurnoverTrend({ range: "week", dimension: "day" }).then(res => {
+    getReportOverview({ range: "month" }, quiet).then(res => { overview.value = res.data || {} }),
+    getReportTurnover({ range: "month" }, quiet).then(res => { monthTurnover.value = res.data || {} }),
+    getReportTurnoverCompare({ range: "month" }, quiet).then(res => { monthCompare.value = res.data || {} }),
+    getReportTurnover({ range: "week" }, quiet).then(res => { weekTurnover.value = res.data || {} }),
+    getReportTurnoverCompare({ range: "week" }, quiet).then(res => { weekCompare.value = res.data || {} }),
+    getReportTurnoverRank({ range: "month" }, quiet).then(res => { rankList.value = res.data || [] }),
+    getReportTurnoverTrend({ range: "week", dimension: "day" }, quiet).then(res => {
       nextTick(() => renderChart(weekChartRef.value, "week", res.data || [], "", "line"))
     }),
-    getReportTurnoverTrend({ range: "year", dimension: yearDimension.value }).then(res => {
+    getReportTurnoverTrend({ range: "year", dimension: yearDimension.value }, quiet).then(res => {
       nextTick(() => renderChart(yearChartRef.value, "year", res.data || [], "", "bar"))
     }),
-    listPurchase({ pageNum: 1, pageSize: 5 }).then(res => { purchaseList.value = res.rows || [] }),
-    listProduct({ stockStatus: "warning", pageNum: 1, pageSize: 3 }).then(res => { warnProducts.value = res.rows || [] }),
-    listDevice({ onlineStatus: "0", pageNum: 1, pageSize: 3 }).then(res => { offlineDevices.value = res.rows || [] }),
-    listLogistics({ payStatus: "0", pageNum: 1, pageSize: 3 }).then(res => { unpaidLogistics.value = res.rows || [] })
+    listPurchase({ pageNum: 1, pageSize: 5 }, quiet).then(res => { purchaseList.value = res.rows || [] }),
+    listProduct({ stockStatus: "warning", pageNum: 1, pageSize: 3 }, quiet).then(res => { warnProducts.value = res.rows || [] }),
+    listDevice({ onlineStatus: "0", pageNum: 1, pageSize: 3 }, quiet).then(res => { offlineDevices.value = res.rows || [] }),
+    listLogistics({ payStatus: "0", pageNum: 1, pageSize: 3 }, quiet).then(res => { unpaidLogistics.value = res.rows || [] })
   ]).finally(() => { loading.value = false })
 }
 

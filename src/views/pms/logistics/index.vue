@@ -31,9 +31,9 @@
           <el-option v-for="dict in statusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
         </el-select>
       </el-form-item>
-      <el-form-item label="物流商" prop="carrier">
-        <el-select v-model="queryParams.carrier" placeholder="全部物流商" clearable style="width: 160px">
-          <el-option v-for="dict in carrierOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
+      <el-form-item label="物流商" prop="carrierId">
+        <el-select v-model="queryParams.carrierId" placeholder="全部物流商" clearable filterable style="width: 180px">
+          <el-option v-for="item in carrierOptions" :key="item.carrierId" :label="item.carrierName" :value="item.carrierId" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -69,8 +69,8 @@
       </el-table-column>
       <el-table-column label="商品" min-width="140" prop="productName" :show-overflow-tooltip="true" />
       <el-table-column label="供货厂家" min-width="120" prop="supplierName" :show-overflow-tooltip="true" />
-      <el-table-column label="物流商" align="center" width="100">
-        <template #default="scope">{{ dictLabel(carrierOptions, scope.row.carrier) || scope.row.carrier }}</template>
+      <el-table-column label="物流商" align="center" min-width="110">
+        <template #default="scope">{{ scope.row.carrier || carrierName(scope.row.carrierId) }}</template>
       </el-table-column>
       <el-table-column label="发货" align="center" prop="shipTime" width="160">
         <template #default="scope">{{ parseTime(scope.row.shipTime) }}</template>
@@ -107,7 +107,7 @@
     <div v-else class="carrier-grid">
       <div v-for="item in carriers" :key="item.name" class="carrier-card">
         <div class="carrier-card__head">
-          <span>{{ dictLabel(carrierOptions, item.name) || item.name }}</span>
+          <span>{{ item.name || "未填写" }}</span>
           <el-tag size="small">{{ item.billCount || 0 }} 单</el-tag>
         </div>
         <div class="carrier-card__amount">{{ formatAmount(item.totalFee) }}</div>
@@ -143,9 +143,9 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="物流商" prop="carrier">
-              <el-select v-model="form.carrier" placeholder="请选择物流商" style="width: 100%">
-                <el-option v-for="dict in carrierOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
+            <el-form-item label="物流商" prop="carrierId">
+              <el-select v-model="form.carrierId" placeholder="请选择物流商" filterable style="width: 100%">
+                <el-option v-for="item in activeCarriers" :key="item.carrierId" :label="item.carrierName" :value="item.carrierId" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -200,7 +200,7 @@
         <el-descriptions-item label="关联进货单">{{ viewForm.purchaseNo || "—" }}</el-descriptions-item>
         <el-descriptions-item label="商品">{{ viewForm.productName }}</el-descriptions-item>
         <el-descriptions-item label="供货厂家">{{ viewForm.supplierName }}</el-descriptions-item>
-        <el-descriptions-item label="物流商">{{ dictLabel(carrierOptions, viewForm.carrier) || viewForm.carrier }}</el-descriptions-item>
+        <el-descriptions-item label="物流商">{{ viewForm.carrier || carrierName(viewForm.carrierId) }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <dict-tag :options="statusOptions" :value="viewForm.payStatus" />
         </el-descriptions-item>
@@ -229,11 +229,15 @@ import StatCard from "@/components/StatCard"
 import { listLogistics, getLogistics, addLogistics, updateLogisticsStatus, markLogistics, batchReconcileLogistics, getLogisticsMonthly, getLogisticsCarrier } from "@/api/pms/logistics"
 import { listPurchase } from "@/api/pms/purchase"
 import { getDashboard } from "@/api/pms/dashboard"
-import { GOODS_LOGISTICS_STATUS, GOODS_CARRIER, useGoodsDict, dictLabel } from "@/utils/goodsDict"
+import { GOODS_LOGISTICS_STATUS, useGoodsDict } from "@/utils/goodsDict"
+import { listCarrier, optionCarrier } from "@/api/pms/carrier"
+import { useRoute } from "vue-router"
 
 const { proxy } = getCurrentInstance()
+const route = useRoute()
 const statusOptions = useGoodsDict("pms_pay_status", GOODS_LOGISTICS_STATUS)
-const carrierOptions = useGoodsDict("goods_carrier", GOODS_CARRIER)
+const carrierOptions = ref([])
+const activeCarriers = ref([])
 
 const activeTab = ref("bills")
 const billList = ref([])
@@ -256,12 +260,12 @@ const data = reactive({
     pageSize: 10,
     logisticsNo: undefined,
     payStatus: undefined,
-    carrier: undefined
+    carrierId: undefined
   },
   rules: {
     logisticsNo: [{ required: true, message: "请填写物流单号", trigger: "blur" }],
     purchaseId: [{ required: true, message: "请关联进货批次", trigger: "change" }],
-    carrier: [{ required: true, message: "请选择物流商", trigger: "change" }],
+    carrierId: [{ required: true, message: "请选择物流商", trigger: "change" }],
     freight: [{ required: true, message: "请填写运费", trigger: "blur" }]
   }
 })
@@ -281,8 +285,15 @@ function carrierPercent(amount) {
   return Math.round((Number(amount || 0) / max) * 100)
 }
 
+function carrierName(carrierId) {
+  const hit = carrierOptions.value.find(item => item.carrierId === carrierId)
+  return hit ? hit.carrierName : "—"
+}
+
 function loadOptions() {
   listPurchase({ pageNum: 1, pageSize: 200 }).then(res => { purchaseOptions.value = res.rows || [] }).catch(() => { purchaseOptions.value = [] })
+  listCarrier({ pageNum: 1, pageSize: 200 }).then(res => { carrierOptions.value = res.rows || [] }).catch(() => { carrierOptions.value = [] })
+  optionCarrier().then(res => { activeCarriers.value = res.data || [] }).catch(() => { activeCarriers.value = [] })
 }
 
 function loadStats() {
@@ -350,7 +361,7 @@ function onPurchaseChange(purchaseId) {
 }
 
 function handleAdd() {
-  form.value = { logisticsNo: undefined, purchaseId: undefined, productId: undefined, supplierId: undefined, carrier: undefined, shipTime: undefined, arriveTime: undefined, freight: 0, insuranceFee: 0, otherFee: 0, remark: undefined }
+  form.value = { logisticsNo: undefined, purchaseId: undefined, productId: undefined, supplierId: undefined, carrierId: undefined, shipTime: undefined, arriveTime: undefined, freight: 0, insuranceFee: 0, otherFee: 0, remark: undefined }
   proxy.resetForm("logisticsRef")
   open.value = true
 }
@@ -417,6 +428,8 @@ function handleExport() {
   proxy.download("pms/logistics/export", { ...queryParams.value }, `logistics_${new Date().getTime()}.xlsx`)
 }
 
+if (route.query.payStatus) queryParams.value.payStatus = String(route.query.payStatus)
+if (route.query.carrierId) queryParams.value.carrierId = Number(route.query.carrierId)
 loadOptions()
 getList()
 loadStats()

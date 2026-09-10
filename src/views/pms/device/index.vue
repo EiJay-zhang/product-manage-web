@@ -141,8 +141,10 @@ import { listDevice, bindDevice, unbindDevice, refreshDevice, restartDevice, bat
 import { optionProduct } from "@/api/pms/product"
 import { getDashboard } from "@/api/pms/dashboard"
 import { GOODS_EINK_ONLINE, GOODS_EINK_SYNC, useGoodsDict } from "@/utils/goodsDict"
+import { useRoute } from "vue-router"
 
 const { proxy } = getCurrentInstance()
+const route = useRoute()
 const onlineOptions = useGoodsDict("pms_online_status", GOODS_EINK_ONLINE)
 const syncOptions = useGoodsDict("goods_eink_sync", GOODS_EINK_SYNC)
 
@@ -305,6 +307,7 @@ function handleUnbind(row) {
   }).catch(() => {})
 }
 
+if (route.query.onlineStatus) queryParams.value.onlineStatus = String(route.query.onlineStatus)
 loadProducts()
 getList()
 loadStats()
