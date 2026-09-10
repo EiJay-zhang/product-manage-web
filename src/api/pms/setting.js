@@ -1,0 +1,16 @@
+import request from '@/utils/request'
+
+export function getSetting() {
+  return request({
+    url: '/pms/setting',
+    method: 'get'
+  })
+}
+
+export function updateSetting(data) {
+  return request({
+    url: '/pms/setting',
+    method: 'put',
+    data: data
+  })
+}
