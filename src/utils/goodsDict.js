@@ -12,7 +12,9 @@ export const GOODS_STOCK_TYPE = [
   { label: "损耗", value: "LOSS", elTagType: "danger" },
   { label: "调拨", value: "TRANSFER", elTagType: "warning" },
   { label: "销售", value: "SALE", elTagType: "primary" },
-  { label: "建档", value: "INIT", elTagType: "info" }
+  { label: "建档", value: "INIT", elTagType: "info" },
+  { label: "作废", value: "VOID", elTagType: "danger" },
+  { label: "退货", value: "RETURN", elTagType: "warning" }
 ]
 
 export const GOODS_STOCK_ADJUST_TYPE = [
@@ -36,6 +38,16 @@ export const GOODS_LOGISTICS_STATUS = [
   { label: "未对账", value: "0", elTagType: "info" },
   { label: "已对账", value: "1", elTagType: "warning" },
   { label: "已结清", value: "2", elTagType: "success" }
+]
+
+export const GOODS_PURCHASE_STATUS = [
+  { label: "正常", value: "0", elTagType: "success" },
+  { label: "作废", value: "1", elTagType: "info" }
+]
+
+export const GOODS_SALE_STATUS = [
+  { label: "正常", value: "0", elTagType: "success" },
+  { label: "已退货", value: "1", elTagType: "info" }
 ]
 
 export function withDictFallback(dictRef, fallback) {

@@ -146,7 +146,7 @@ function loadSetting() {
   }).finally(() => { loading.value = false })
 }
 
-const PMS_LOG_TITLES = ["商品信息", "商品分类", "供应商", "进货", "库存", "销售出库", "物流对账", "物流商", "墨水屏", "报表", "业务设置"]
+const PMS_LOG_TITLES = ["商品信息", "商品分类", "供应商", "进货", "库存", "销售出库", "销售退货", "物流对账", "物流商", "墨水屏", "报表", "业务设置"]
 
 function loadOperlog() {
   listOperlog({ pageNum: 1, pageSize: 50 }).then(res => {

@@ -24,6 +24,11 @@
           <el-option v-for="item in categoryOptions" :key="item.categoryId" :label="item.categoryName" :value="item.categoryId" />
         </el-select>
       </el-form-item>
+      <el-form-item label="状态" prop="status">
+        <el-select v-model="queryParams.status" placeholder="全部状态" clearable style="width: 140px">
+          <el-option v-for="dict in saleStatusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="销售时间">
         <el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD" range-separator="-" start-placeholder="开始" end-placeholder="结束" style="width: 240px" />
       </el-form-item>
@@ -43,7 +48,7 @@
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table v-loading="loading" :data="saleList">
+    <el-table v-loading="loading" :data="saleList" :row-class-name="saleRowClass">
       <el-table-column label="销售单号" align="center" prop="saleNo" min-width="150">
         <template #default="scope"><span class="link-type" @click="handleView(scope.row)">{{ scope.row.saleNo }}</span></template>
       </el-table-column>
@@ -56,13 +61,19 @@
       <el-table-column label="金额" align="center" prop="amount" width="110">
         <template #default="scope"><span class="amount-ok">{{ formatAmount(scope.row.amount) }}</span></template>
       </el-table-column>
+      <el-table-column label="状态" align="center" prop="status" width="90">
+        <template #default="scope">
+          <dict-tag :options="saleStatusOptions" :value="scope.row.status || '0'" />
+        </template>
+      </el-table-column>
       <el-table-column label="销售时间" align="center" prop="saleTime" width="170">
         <template #default="scope">{{ parseTime(scope.row.saleTime) }}</template>
       </el-table-column>
       <el-table-column label="操作人" align="center" prop="createBy" width="100" />
-      <el-table-column label="操作" align="center" width="90">
+      <el-table-column label="操作" align="center" width="150" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleView(scope.row)" v-hasPermi="['pms:sale:query']">详情</el-button>
+          <el-button v-if="scope.row.status !== '1'" link type="danger" icon="RefreshLeft" @click="handleVoid(scope.row)" v-hasPermi="['pms:sale:void']">退货</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -113,6 +124,9 @@
         <el-descriptions-item label="售价">¥{{ Number(viewForm.salePrice || 0).toFixed(2) }}</el-descriptions-item>
         <el-descriptions-item label="金额">{{ formatAmount(viewForm.amount) }}</el-descriptions-item>
         <el-descriptions-item label="销售时间">{{ parseTime(viewForm.saleTime) }}</el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <dict-tag :options="saleStatusOptions" :value="viewForm.status || '0'" />
+        </el-descriptions-item>
         <el-descriptions-item label="操作人">{{ viewForm.createBy }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ viewForm.remark || "—" }}</el-descriptions-item>
       </el-descriptions>
@@ -122,12 +136,14 @@
 
 <script setup name="PmsSale">
 import StatCard from "@/components/StatCard"
-import { listSale, getSale, addSale } from "@/api/pms/sale"
+import { listSale, getSale, addSale, voidSale } from "@/api/pms/sale"
 import { optionProduct } from "@/api/pms/product"
 import { optionCategory } from "@/api/pms/category"
 import { getDashboard } from "@/api/pms/dashboard"
+import { GOODS_SALE_STATUS } from "@/utils/goodsDict"
 
 const { proxy } = getCurrentInstance()
+const saleStatusOptions = GOODS_SALE_STATUS
 const saleList = ref([])
 const productOptions = ref([])
 const categoryOptions = ref([])
@@ -147,6 +163,7 @@ const data = reactive({
     pageSize: 10,
     productName: undefined,
     categoryId: undefined,
+    status: undefined,
     beginTime: undefined,
     endTime: undefined
   },
@@ -242,6 +259,21 @@ function handleView(row) {
   })
 }
 
+function handleVoid(row) {
+  proxy.$modal.confirm("确认退货「" + row.saleNo + "」？将回加库存 " + row.qty + " 件，并从营业额中剔除。").then(() => {
+    return voidSale(row.saleId)
+  }).then(() => {
+    proxy.$modal.msgSuccess("已退货")
+    loadOptions()
+    getList()
+    loadStats()
+  }).catch(() => {})
+}
+
+function saleRowClass({ row }) {
+  return row.status === "1" ? "row-void" : ""
+}
+
 function handleExport() {
   applyDateRange()
   proxy.download("pms/sale/export", { ...queryParams.value }, `sale_${new Date().getTime()}.xlsx`)
@@ -254,6 +286,7 @@ loadStats()
 
 <style scoped>
 .amount-ok { color: var(--el-color-success); font-weight: 700; }
+.row-void { color: var(--el-text-color-placeholder); }
 .goods-stat-row { margin-bottom: 16px; }
 .goods-stat-row :deep(.el-col) { margin-bottom: 12px; }
 </style>

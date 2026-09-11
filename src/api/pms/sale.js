@@ -22,3 +22,10 @@ export function addSale(data) {
     data: data
   })
 }
+
+export function voidSale(saleId) {
+  return request({
+    url: '/pms/sale/' + saleId + '/void',
+    method: 'put'
+  })
+}

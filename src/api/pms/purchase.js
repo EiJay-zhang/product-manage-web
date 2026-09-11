@@ -23,3 +23,10 @@ export function addPurchase(data) {
     data: data
   })
 }
+
+export function voidPurchase(purchaseId) {
+  return request({
+    url: '/pms/purchase/' + purchaseId + '/void',
+    method: 'put'
+  })
+}

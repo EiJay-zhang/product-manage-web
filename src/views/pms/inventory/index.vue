@@ -24,6 +24,11 @@
           <el-option v-for="item in supplierOptions" :key="item.supplierId" :label="item.supplierName" :value="item.supplierId" />
         </el-select>
       </el-form-item>
+      <el-form-item v-if="activeTab === 'purchase'" label="状态" prop="status">
+        <el-select v-model="queryParams.status" placeholder="全部状态" clearable style="width: 140px">
+          <el-option v-for="dict in purchaseStatusOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
+        </el-select>
+      </el-form-item>
       <el-form-item v-if="activeTab === 'stock'" label="变动类型" prop="changeType">
         <el-select v-model="queryParams.changeType" placeholder="全部类型" clearable style="width: 160px">
           <el-option v-for="dict in stockTypeOptions" :key="dict.value" :label="dict.label" :value="dict.value" />
@@ -62,7 +67,7 @@
       </el-col>
     </el-row>
 
-    <el-table v-if="activeTab === 'purchase'" v-loading="loading" :data="purchaseList">
+    <el-table v-if="activeTab === 'purchase'" v-loading="loading" :data="purchaseList" :row-class-name="purchaseRowClass">
       <el-table-column label="进货单号" align="center" prop="purchaseNo" min-width="150">
         <template #default="scope"><span class="link-type">{{ scope.row.purchaseNo }}</span></template>
       </el-table-column>
@@ -76,8 +81,19 @@
         <template #default="scope"><span class="amount-ok">{{ formatAmount(scope.row.amount) }}</span></template>
       </el-table-column>
       <el-table-column label="供货厂家" align="center" prop="supplierName" min-width="120" :show-overflow-tooltip="true" />
+      <el-table-column label="状态" align="center" prop="status" width="90">
+        <template #default="scope">
+          <dict-tag :options="purchaseStatusOptions" :value="scope.row.status || '0'" />
+        </template>
+      </el-table-column>
       <el-table-column label="进货时间" align="center" prop="purchaseTime" width="170">
         <template #default="scope">{{ parseTime(scope.row.purchaseTime, "{y}-{m}-{d}") }}</template>
+      </el-table-column>
+      <el-table-column label="操作" align="center" width="90" class-name="small-padding fixed-width">
+        <template #default="scope">
+          <el-button v-if="scope.row.status !== '1'" link type="danger" icon="CircleClose" @click="handleVoid(scope.row)" v-hasPermi="['pms:purchase:void']">作废</el-button>
+          <span v-else class="text-muted">已作废</span>
+        </template>
       </el-table-column>
     </el-table>
 
@@ -205,12 +221,12 @@
 
 <script setup name="PmsInventory">
 import StatCard from "@/components/StatCard"
-import { listPurchase, addPurchase } from "@/api/pms/purchase"
+import { listPurchase, addPurchase, voidPurchase } from "@/api/pms/purchase"
 import { listStockLog, adjustStock as submitStockAdjust } from "@/api/pms/stock"
 import { optionProduct } from "@/api/pms/product"
 import { optionSupplier } from "@/api/pms/supplier"
 import { getDashboard } from "@/api/pms/dashboard"
-import { GOODS_STOCK_TYPE, GOODS_STOCK_ADJUST_TYPE, useGoodsDict, todayStr, monthRange } from "@/utils/goodsDict"
+import { GOODS_STOCK_TYPE, GOODS_STOCK_ADJUST_TYPE, GOODS_PURCHASE_STATUS, useGoodsDict, todayStr, monthRange } from "@/utils/goodsDict"
 
 const props = defineProps({
   defaultTab: { type: String, default: "purchase" }
@@ -218,6 +234,7 @@ const props = defineProps({
 
 const { proxy } = getCurrentInstance()
 const stockTypeOptions = useGoodsDict("pms_stock_change_type", GOODS_STOCK_TYPE)
+const purchaseStatusOptions = useGoodsDict("pms_bill_status", GOODS_PURCHASE_STATUS)
 const adjustTypeOptions = GOODS_STOCK_ADJUST_TYPE
 
 const activeTab = ref(props.defaultTab === "stock" ? "stock" : "purchase")
@@ -242,6 +259,7 @@ const data = reactive({
     productName: undefined,
     supplierId: undefined,
     changeType: undefined,
+    status: undefined,
     period: "month",
     beginTime: undefined,
     endTime: undefined
@@ -316,10 +334,10 @@ function loadStats() {
     stats.value.emptyCount = d.emptyCount || 0
   }).catch(() => {})
   const month = monthRange(0)
-  listPurchase({ pageNum: 1, pageSize: 1, beginTime: month[0], endTime: month[1] }).then(res => {
+  listPurchase({ pageNum: 1, pageSize: 1, beginTime: month[0], endTime: month[1], status: "0" }).then(res => {
     stats.value.monthBatches = res.total || 0
   }).catch(() => {})
-  listPurchase({ pageNum: 1, pageSize: 200, beginTime: month[0], endTime: month[1] }).then(res => {
+  listPurchase({ pageNum: 1, pageSize: 200, beginTime: month[0], endTime: month[1], status: "0" }).then(res => {
     stats.value.monthAmount = (res.rows || []).reduce((sum, row) => sum + Number(row.amount || 0), 0)
   }).catch(() => {})
 }
@@ -329,7 +347,10 @@ function buildQuery() {
   const q = { ...queryParams.value }
   delete q.period
   if (activeTab.value === "purchase") delete q.changeType
-  if (activeTab.value === "stock") delete q.supplierId
+  if (activeTab.value === "stock") {
+    delete q.supplierId
+    delete q.status
+  }
   return q
 }
 
@@ -427,6 +448,21 @@ function submitAdjust() {
   })
 }
 
+function handleVoid(row) {
+  proxy.$modal.confirm("确认作废进货单「" + row.purchaseNo + "」？将回滚库存 " + row.qty + " 件。").then(() => {
+    return voidPurchase(row.purchaseId)
+  }).then(() => {
+    proxy.$modal.msgSuccess("已作废")
+    loadOptions()
+    getList()
+    loadStats()
+  }).catch(() => {})
+}
+
+function purchaseRowClass({ row }) {
+  return row.status === "1" ? "row-void" : ""
+}
+
 function handleExport() {
   const url = activeTab.value === "purchase" ? "pms/purchase/export" : "pms/stock/log/export"
   proxy.download(url, buildQuery(), `inventory_${new Date().getTime()}.xlsx`)
@@ -452,6 +488,12 @@ loadStats()
 .stock-empty {
   color: var(--el-color-danger);
   font-weight: 700;
+}
+.text-muted {
+  color: var(--el-text-color-placeholder);
+}
+.row-void {
+  color: var(--el-text-color-placeholder);
 }
 .goods-stat-row {
   margin-bottom: 16px;

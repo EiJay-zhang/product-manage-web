@@ -44,6 +44,7 @@
         </el-radio-group>
       </el-col>
       <el-col :xs="24" :sm="12" class="toolbar-right">
+        <el-button type="info" plain icon="Upload" @click="handleImport" v-hasPermi="['pms:product:import']">导入</el-button>
         <el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['pms:product:export']">导出</el-button>
         <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['pms:product:add']">新增商品</el-button>
         <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" :columns="columns" storageKey="pms-product-columns" />
@@ -189,11 +190,14 @@
         </div>
       </template>
     </el-dialog>
+
+    <excel-import-dialog ref="importProductRef" title="商品导入" action="/pms/product/importData" template-action="/pms/product/importTemplate" template-file-name="product_template" update-support-label="是否更新已经存在的商品（按编号或名称+规格匹配）" @success="onImportSuccess" />
   </div>
 </template>
 
 <script setup name="PmsProduct">
 import StatCard from "@/components/StatCard"
+import ExcelImportDialog from "@/components/ExcelImportDialog"
 import { listProduct, getProduct, addProduct, updateProduct, delProduct } from "@/api/pms/product"
 import { optionSupplier } from "@/api/pms/supplier"
 import { optionCategory } from "@/api/pms/category"
@@ -400,6 +404,15 @@ function handleSyncEink() {
 
 function handleExport() {
   proxy.download("pms/product/export", { ...queryParams.value }, `product_${new Date().getTime()}.xlsx`)
+}
+
+function handleImport() {
+  proxy.$refs["importProductRef"].open()
+}
+
+function onImportSuccess() {
+  getList()
+  loadStats()
 }
 
 if (route.query.stockStatus) {
