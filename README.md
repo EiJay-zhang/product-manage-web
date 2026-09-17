@@ -115,6 +115,7 @@ const baseUrl = 'http://localhost:8080' // 后端接口
 
 ## 相关文档
 
+- [用户操作手册](docs/用户操作手册.md)（给试用人员看）
 - [项目实现情况与计划](docs/项目实现情况与计划.md)
 - 若依官方文档：<http://doc.ruoyi.vip>
 
