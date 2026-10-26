@@ -104,14 +104,30 @@
       </el-table-column>
     </el-table>
 
-    <div v-else class="carrier-grid">
-      <div v-for="item in carriers" :key="item.name" class="carrier-card">
-        <div class="carrier-card__head">
-          <span>{{ item.name || "未填写" }}</span>
-          <el-tag size="small">{{ item.billCount || 0 }} 单</el-tag>
+    <div v-else>
+      <div class="stats-title">按物流商</div>
+      <el-empty v-if="!carriers.length" description="本月暂无物流商费用" />
+      <div v-else class="carrier-grid">
+        <div v-for="item in carriers" :key="'c-' + item.name" class="carrier-card">
+          <div class="carrier-card__head">
+            <span>{{ item.name || "未填写" }}</span>
+            <el-tag size="small">{{ item.billCount || 0 }} 单</el-tag>
+          </div>
+          <div class="carrier-card__amount">{{ formatAmount(item.totalFee) }}</div>
+          <el-progress :percentage="feePercent(carriers, item.totalFee)" :stroke-width="6" :show-text="false" />
         </div>
-        <div class="carrier-card__amount">{{ formatAmount(item.totalFee) }}</div>
-        <el-progress :percentage="carrierPercent(item.totalFee)" :stroke-width="6" :show-text="false" />
+      </div>
+      <div class="stats-title">按供货厂家</div>
+      <el-empty v-if="!suppliers.length" description="本月暂无厂家物流费用" />
+      <div v-else class="carrier-grid">
+        <div v-for="item in suppliers" :key="'s-' + item.name" class="carrier-card">
+          <div class="carrier-card__head">
+            <span>{{ item.name || "未知厂家" }}</span>
+            <el-tag size="small">{{ item.billCount || 0 }} 单</el-tag>
+          </div>
+          <div class="carrier-card__amount">{{ formatAmount(item.totalFee) }}</div>
+          <el-progress :percentage="feePercent(suppliers, item.totalFee)" :stroke-width="6" :show-text="false" />
+        </div>
       </div>
     </div>
 
@@ -226,7 +242,7 @@
 
 <script setup name="PmsLogistics">
 import StatCard from "@/components/StatCard"
-import { listLogistics, getLogistics, addLogistics, updateLogisticsStatus, markLogistics, batchReconcileLogistics, getLogisticsMonthly, getLogisticsCarrier } from "@/api/pms/logistics"
+import { listLogistics, getLogistics, addLogistics, updateLogisticsStatus, markLogistics, batchReconcileLogistics, getLogisticsMonthly, getLogisticsCarrier, getLogisticsSupplier } from "@/api/pms/logistics"
 import { listPurchase } from "@/api/pms/purchase"
 import { getDashboard } from "@/api/pms/dashboard"
 import { GOODS_LOGISTICS_STATUS, useGoodsDict } from "@/utils/goodsDict"
@@ -243,6 +259,7 @@ const activeTab = ref("bills")
 const billList = ref([])
 const purchaseOptions = ref([])
 const carriers = ref([])
+const suppliers = ref([])
 const loading = ref(true)
 const showSearch = ref(true)
 const ids = ref([])
@@ -280,8 +297,8 @@ function formatAmount(value) {
   return "¥" + amount.toLocaleString()
 }
 
-function carrierPercent(amount) {
-  const max = Math.max(...carriers.value.map(item => Number(item.totalFee || 0)), 1)
+function feePercent(list, amount) {
+  const max = Math.max(...list.map(item => Number(item.totalFee || 0)), 1)
   return Math.round((Number(amount || 0) / max) * 100)
 }
 
@@ -306,6 +323,9 @@ function loadStats() {
   getLogisticsCarrier({ range: "month" }).then(res => {
     carriers.value = res.data || []
   }).catch(() => { carriers.value = [] })
+  getLogisticsSupplier({ range: "month" }).then(res => {
+    suppliers.value = res.data || []
+  }).catch(() => { suppliers.value = [] })
   getDashboard().then(res => {
     stats.value.pendingCount = (res.data || {}).uncheckedCount || 0
   }).catch(() => {})
@@ -446,6 +466,13 @@ loadStats()
 .amount-ok {
   color: var(--el-color-success);
   font-weight: 700;
+}
+.stats-title {
+  margin: 4px 0 12px;
+  font-weight: 700;
+}
+.stats-title + .carrier-grid {
+  margin-bottom: 20px;
 }
 .carrier-grid {
   display: grid;

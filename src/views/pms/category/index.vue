@@ -18,6 +18,7 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['pms:category:add']">新增</el-button>
+        <el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['pms:category:export']">导出</el-button>
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
@@ -112,6 +113,9 @@ function submitForm() {
       getList()
     })
   })
+}
+function handleExport() {
+  proxy.download("pms/category/export", { ...queryParams.value }, `category_${new Date().getTime()}.xlsx`)
 }
 function handleDelete(row) {
   proxy.$modal.confirm('是否确认删除分类"' + row.categoryName + '"？').then(() => delCategory(row.categoryId)).then(() => {

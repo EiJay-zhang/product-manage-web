@@ -41,11 +41,11 @@
             <el-form-item label="必选字段">
               <div class="switch-row">
                 <span>商品名称</span>
-                <el-switch model-value="Y" active-value="Y" inactive-value="N" disabled />
+                <el-switch v-model="form.showName" active-value="Y" inactive-value="N" disabled />
                 <span>规格</span>
-                <el-switch model-value="Y" active-value="Y" inactive-value="N" disabled />
+                <el-switch v-model="form.showSpec" active-value="Y" inactive-value="N" disabled />
                 <span>售价</span>
-                <el-switch model-value="Y" active-value="Y" inactive-value="N" disabled />
+                <el-switch v-model="form.showSalePrice" active-value="Y" inactive-value="N" disabled />
               </div>
             </el-form-item>
             <el-form-item label="可选字段">
@@ -57,6 +57,9 @@
                 <span>厂家</span>
                 <el-switch v-model="form.showSupplier" active-value="Y" inactive-value="N" />
               </div>
+            </el-form-item>
+            <el-form-item label="价签预览">
+              <price-tag :content="previewContent" />
             </el-form-item>
           </el-form>
         </el-card>
@@ -99,6 +102,7 @@
 <script setup name="PmsSetting">
 import { getSetting, updateSetting } from "@/api/pms/setting"
 import { list as listOperlog } from "@/api/monitor/operlog"
+import PriceTag from "@/views/pms/device/PriceTag.vue"
 
 const { proxy } = getCurrentInstance()
 const { sys_oper_type } = useDict("sys_oper_type")
@@ -111,6 +115,21 @@ const data = reactive({
   }
 })
 const { form, rules } = toRefs(data)
+
+const previewContent = computed(() => {
+  const current = form.value || {}
+  const shown = flag => flag === "Y"
+  return {
+    empty: "N",
+    fontStyle: current.einkFontStyle || "default",
+    productName: shown(current.showName) ? "示例矿泉水" : null,
+    spec: shown(current.showSpec) ? "550ml" : null,
+    salePrice: shown(current.showSalePrice) ? 2.5 : null,
+    intro: shown(current.showIntro) ? "饮用天然水" : null,
+    stockQty: shown(current.showStock) ? 36 : null,
+    supplierName: shown(current.showSupplier) ? "示例厂家" : null
+  }
+})
 
 const defaults = {
   stockWarnThreshold: 5,
@@ -140,9 +159,6 @@ function loadSetting() {
   getSetting().then(res => {
     form.value = Object.assign({}, defaults, res.data || {})
     form.value.einkSyncIntervalSec = normalizeInterval(form.value.einkSyncIntervalSec)
-    form.value.showName = "Y"
-    form.value.showSpec = "Y"
-    form.value.showSalePrice = "Y"
   }).finally(() => { loading.value = false })
 }
 
@@ -158,12 +174,7 @@ function loadOperlog() {
 function submitForm() {
   proxy.$refs["settingRef"].validate(valid => {
     if (!valid) return
-    const payload = Object.assign({}, form.value, {
-      showName: "Y",
-      showSpec: "Y",
-      showSalePrice: "Y"
-    })
-    updateSetting(payload).then(() => {
+    updateSetting(form.value).then(() => {
       proxy.$modal.msgSuccess("保存成功")
       loadSetting()
       loadOperlog()

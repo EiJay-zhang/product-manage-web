@@ -75,3 +75,34 @@ export function saveDeviceTemplate(data) {
     data: data
   })
 }
+
+export function markDevice(deviceId, data) {
+  return request({
+    url: '/pms/device/mark/' + deviceId,
+    method: 'put',
+    data: data
+  })
+}
+
+export function einkHeartbeat(data) {
+  return request({
+    url: '/pms/eink/heartbeat',
+    method: 'post',
+    data: data
+  })
+}
+
+export function einkContent(sn) {
+  return request({
+    url: '/pms/eink/content/' + encodeURIComponent(sn),
+    method: 'get'
+  })
+}
+
+export function einkAck(data) {
+  return request({
+    url: '/pms/eink/ack',
+    method: 'post',
+    data: data
+  })
+}

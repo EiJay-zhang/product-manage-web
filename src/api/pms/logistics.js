@@ -71,3 +71,11 @@ export function getLogisticsCarrier(query) {
     params: query
   })
 }
+
+export function getLogisticsSupplier(query) {
+  return request({
+    url: '/pms/logistics/stats/supplier',
+    method: 'get',
+    params: query
+  })
+}
